@@ -27,8 +27,6 @@
 #include <mach/msm_iomap.h>
 #include <mach/socinfo.h>
 #include <mach/system.h>
-#include <mach/scm.h>
-#include <mach/socinfo.h>
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
 #include <asm/pgtable.h>
@@ -70,7 +68,6 @@ static int msm_pm_debug_mask = 1;
 module_param_named(
 	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
-static int msm_pm_retention_tz_call;
 
 
 /******************************************************************************
@@ -81,9 +78,6 @@ enum {
 	MSM_PM_MODE_ATTR_IDLE,
 	MSM_PM_MODE_ATTR_NR,
 };
-
-#define SCM_L2_RETENTION	(0x2)
-#define SCM_CMD_TERMINATE_PC	(0x2)
 
 static char *msm_pm_mode_attr_labels[MSM_PM_MODE_ATTR_NR] = {
 	[MSM_PM_MODE_ATTR_SUSPEND] = "suspend_enabled",
@@ -339,28 +333,13 @@ static void msm_pm_config_hw_before_power_down(void)
  */
 static void msm_pm_config_hw_after_power_up(void)
 {
+	return;
 }
 
 /*
  * Configure hardware registers in preparation for SWFI.
  */
 static void msm_pm_config_hw_before_swfi(void)
-{
-	return;
-}
-
-/*
- * Configure/Restore hardware registers in preparation for Retention.
- */
-
-static void msm_pm_config_hw_after_retention(void)
-{
-	int ret;
-	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
-	WARN_ON(ret);
-}
-
-static void msm_pm_config_hw_before_retention(void)
 {
 	return;
 }
@@ -431,17 +410,12 @@ static void msm_pm_retention(void)
 {
 	int ret = 0;
 
-	msm_pm_config_hw_before_retention();
+	msm_pm_config_hw_before_swfi();
 	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_POWER_RETENTION, false);
 	WARN_ON(ret);
-
-	if (msm_pm_retention_tz_call)
-		scm_call_atomic1(SCM_SVC_BOOT, SCM_CMD_TERMINATE_PC,
-					SCM_L2_RETENTION);
-	else
-		msm_arch_idle();
-
-	msm_pm_config_hw_after_retention();
+	msm_arch_idle();
+	ret = msm_spm_set_low_power_mode(MSM_SPM_MODE_CLOCK_GATING, false);
+	WARN_ON(ret);
 }
 
 #ifdef CONFIG_CACHE_L2X0
@@ -708,10 +682,6 @@ int msm_pm_idle_prepare(struct cpuidle_device *dev,
 		case MSM_PM_SLEEP_MODE_RETENTION:
 			if (!allow)
 				break;
-			if (num_online_cpus() > 1) {
-				allow = false;
-				break;
-			}
 			/* fall through */
 
 		case MSM_PM_SLEEP_MODE_WAIT_FOR_INTERRUPT:
@@ -957,11 +927,6 @@ void msm_pm_set_sleep_ops(struct msm_pm_sleep_ops *ops)
 {
 	if (ops)
 		pm_sleep_ops = *ops;
-}
-
-void __init msm_pm_set_tz_retention_flag(unsigned int flag)
-{
-	msm_pm_retention_tz_call = flag;
 }
 
 static int __init msm_pm_init(void)
