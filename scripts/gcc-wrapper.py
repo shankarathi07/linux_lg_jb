@@ -43,7 +43,7 @@ allowed_warnings = set([
     "alignment.c:327",
     "mmu.c:602",
     "return_address.c:62",
-    "mipi_lgit.c:576",
+    "mipi_lgit.c:586",
 ])
 
 
