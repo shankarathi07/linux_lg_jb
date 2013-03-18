@@ -2233,28 +2233,27 @@ static void touch_early_suspend(struct early_suspend *h)
 	}
 
 #ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-		if (s2w_switch == 0)
+        if (s2w_switch == 0)
 #endif
-		{
-			if (ts->pdata->role->operation_mode == INTERRUPT_MODE)
-				disable_irq(ts->client->irq);
-			else
-				hrtimer_cancel(&ts->timer);
+        {
+	        if (ts->pdata->role->operation_mode == INTERRUPT_MODE)
+		                disable_irq(ts->client->irq);
+	        else
+		        hrtimer_cancel(&ts->timer);
 
-			cancel_work_sync(&ts->work);
-			cancel_delayed_work_sync(&ts->work_init);
-			if (ts->pdata->role->key_type == TOUCH_HARD_KEY)
-				cancel_delayed_work_sync(&ts->work_touch_lock);
+	        cancel_work_sync(&ts->work);
+	        cancel_delayed_work_sync(&ts->work_init);
+	        if (ts->pdata->role->key_type == TOUCH_HARD_KEY)
+		        cancel_delayed_work_sync(&ts->work_touch_lock);
 
-			release_all_ts_event(ts);
+	        release_all_ts_event(ts);
 
-			touch_power_cntl(ts, ts->pdata->role->suspend_pwr);
-		}
+	        touch_power_cntl(ts, ts->pdata->role->suspend_pwr);
+        }
 #ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-		else if (s2w_switch > 0) {
-			enable_irq_wake(ts->client->irq);
-			release_all_ts_event(ts);
-		}
+        else if (s2w_switch > 0) {
+                enable_irq_wake(ts->client->irq);
+        }
 #endif
 }
 
