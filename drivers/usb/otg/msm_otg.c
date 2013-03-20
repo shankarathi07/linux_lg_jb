@@ -691,7 +691,8 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
 {
 	struct msm_otg *motg = container_of(phy, struct msm_otg, phy);
 
-	if (aca_enabled())
+	// simulating aca_enabled() since using ID_A for host mode -ziddey
+	if (aca_enabled() || test_bit(ID_A, &motg->inputs))
 		return 0;
 
 	if (atomic_read(&motg->in_lpm) == suspend)
@@ -1098,12 +1099,13 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 	if (g && g->is_a_peripheral)
 		return;
 
-	if ((motg->chg_type == USB_ACA_DOCK_CHARGER ||
+	// force fast charging in host mode -ziddey
+	/*if ((motg->chg_type == USB_ACA_DOCK_CHARGER ||
 		motg->chg_type == USB_ACA_A_CHARGER ||
 		motg->chg_type == USB_ACA_B_CHARGER ||
 		motg->chg_type == USB_ACA_C_CHARGER) &&
 			mA > IDEV_ACA_CHG_LIMIT)
-		mA = IDEV_ACA_CHG_LIMIT;
+		mA = IDEV_ACA_CHG_LIMIT;*/
 
 	if (msm_otg_notify_chg_type(motg))
 		dev_err(motg->phy.dev,
@@ -1210,7 +1212,8 @@ static int msm_otg_usbdev_notify(struct notifier_block *self,
 
 	switch (action) {
 	case USB_DEVICE_ADD:
-		if (aca_enabled())
+		// simulating aca_enabled() since using ID_A for host mode -ziddey
+		if (aca_enabled() || test_bit(ID_A, &motg->inputs))
 			usb_disable_autosuspend(udev);
 		if (otg->phy->state == OTG_STATE_A_WAIT_BCON) {
 			pr_debug("B_CONN set\n");
@@ -2109,8 +2112,13 @@ static void msm_chg_detect_work(struct work_struct *w)
 				break;
 			}
 
-			if (line_state) /* DP > VLGC or/and DM > VLGC */
-				motg->chg_type = USB_PROPRIETARY_CHARGER;
+			if (line_state) /* DP > VLGC or/and DM > VLGC */ {
+				// simulating ID_A to force usb host mode with charging -ziddey
+				//motg->chg_type = USB_PROPRIETARY_CHARGER;
+				pr_debug("***FORCING USB HOST MODE WITH CHARGING - SET ID_A***\n");
+				set_bit(ID_A, &motg->inputs);
+				motg->chg_type = USB_ACA_A_CHARGER;
+			}
 			else
 				motg->chg_type = USB_SDP_CHARGER;
 
@@ -2964,9 +2972,10 @@ static void msm_otg_set_vbus_state(int online)
 	struct msm_otg *motg = the_msm_otg;
 	struct usb_otg *otg = motg->phy.otg;
 
+	// need BSV interrupt in A Host Mode to detect cable unplug -ziddey
 	/* In A Host Mode, ignore received BSV interrupts */
-	if (otg->phy->state >= OTG_STATE_A_IDLE)
-		return;
+	/*if (otg->phy->state >= OTG_STATE_A_IDLE);
+		return;*/
 
 	if (online) {
 		pr_debug("PMIC: BSV set\n");
@@ -2974,6 +2983,13 @@ static void msm_otg_set_vbus_state(int online)
 	} else {
 		pr_debug("PMIC: BSV clear\n");
 		clear_bit(B_SESS_VLD, &motg->inputs);
+
+		// hack to disable usb host mode (if enabled) -ziddey
+		if (test_and_clear_bit(ID_A, &motg->inputs)) {
+			pr_debug("***UNFORCING USB HOST MODE WITH CHARGING - CLEAR ID_A***\n");
+			motg->chg_type = USB_INVALID_CHARGER;
+			motg->chg_state = USB_CHG_STATE_UNDEFINED;
+		}
 	}
 
 	if (!init) {
@@ -3295,8 +3311,9 @@ static int msm_otg_debugfs_init(struct msm_otg *motg)
 	if (!msm_otg_dbg_root || IS_ERR(msm_otg_dbg_root))
 		return -ENODEV;
 
-	if (motg->pdata->mode == USB_OTG &&
-		motg->pdata->otg_control == OTG_USER_CONTROL) {
+	// enable /sys/kernel/debug/msm_otg/host (for debug purposes only. manipulation not recommended) -ziddey
+	if (motg->pdata->mode == USB_OTG /*&&
+		motg->pdata->otg_control == OTG_USER_CONTROL*/) {
 
 		msm_otg_dentry = debugfs_create_file("mode", S_IRUGO |
 			S_IWUSR, msm_otg_dbg_root, motg,
