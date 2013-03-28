@@ -692,7 +692,7 @@ static int msm_otg_set_suspend(struct usb_phy *phy, int suspend)
 	struct msm_otg *motg = container_of(phy, struct msm_otg, phy);
 
 	// simulating aca_enabled() since using ID_A for host mode -ziddey
-	if (aca_enabled() || test_bit(ID_A, &motg->inputs))
+	//if (aca_enabled() || test_bit(ID_A, &motg->inputs))
 		return 0;
 
 	if (atomic_read(&motg->in_lpm) == suspend)
@@ -1213,7 +1213,7 @@ static int msm_otg_usbdev_notify(struct notifier_block *self,
 	switch (action) {
 	case USB_DEVICE_ADD:
 		// simulating aca_enabled() since using ID_A for host mode -ziddey
-		if (aca_enabled() || test_bit(ID_A, &motg->inputs))
+		//if (aca_enabled() || test_bit(ID_A, &motg->inputs))
 			usb_disable_autosuspend(udev);
 		if (otg->phy->state == OTG_STATE_A_WAIT_BCON) {
 			pr_debug("B_CONN set\n");
@@ -2263,10 +2263,11 @@ static void msm_otg_sm_work(struct work_struct *w)
 		} else if ((!test_bit(ID, &motg->inputs) ||
 				test_bit(ID_A, &motg->inputs)) && otg->host) {
 			pr_debug("!id || id_A\n");
-			if (slimport_is_connected()) {
+			// TEST: allow slimport + host mode -ziddey
+			/*if (slimport_is_connected()) {
 				work = 1;
 				break;
-			}
+			}*/
 			if (msm_chg_mhl_detect(motg)) {
 				work = 1;
 				break;
@@ -3114,39 +3115,48 @@ static ssize_t msm_otg_mode_write(struct file *file, const char __user *ubuf,
 		goto out;
 	}
 
+	// always force req_mode -ziddey
 	switch (req_mode) {
 	case USB_NONE:
-		switch (phy->state) {
+		/*switch (phy->state) {
 		case OTG_STATE_A_HOST:
-		case OTG_STATE_B_PERIPHERAL:
+		case OTG_STATE_B_PERIPHERAL:*/
 			set_bit(ID, &motg->inputs);
 			clear_bit(B_SESS_VLD, &motg->inputs);
+
+			// also clear ID_A -ziddey
+			clear_bit(ID_A, &motg->inputs);
+
 			break;
-		default:
+		/*default:
 			goto out;
 		}
-		break;
+		break;*/
 	case USB_PERIPHERAL:
-		switch (phy->state) {
+		/*switch (phy->state) {
 		case OTG_STATE_B_IDLE:
-		case OTG_STATE_A_HOST:
+		case OTG_STATE_A_HOST:*/
 			set_bit(ID, &motg->inputs);
 			set_bit(B_SESS_VLD, &motg->inputs);
+
+                        // also clear ID_A -ziddey
+                        clear_bit(ID_A, &motg->inputs);
+
 			break;
-		default:
+		/*default:
 			goto out;
 		}
-		break;
+		break;*/
 	case USB_HOST:
-		switch (phy->state) {
+		/*switch (phy->state) {
 		case OTG_STATE_B_IDLE:
-		case OTG_STATE_B_PERIPHERAL:
+		case OTG_STATE_B_PERIPHERAL:*/
 			clear_bit(ID, &motg->inputs);
 			break;
-		default:
+		/*default:
 			goto out;
 		}
-		break;
+		break;*/
 	default:
 		goto out;
 	}
