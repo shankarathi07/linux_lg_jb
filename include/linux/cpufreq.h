@@ -422,9 +422,4 @@ void cpufreq_frequency_table_get_attr(struct cpufreq_frequency_table *table,
 
 void cpufreq_frequency_table_put_attr(unsigned int cpu);
 
-/*********************************************************************
- *                     Governor Helpers				     *
- *********************************************************************/
-cputime64_t get_cpu_idle_time(unsigned int cpu, cputime64_t *wall);
-
 #endif /* _LINUX_CPUFREQ_H */
