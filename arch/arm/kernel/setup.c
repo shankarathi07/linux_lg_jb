@@ -66,7 +66,7 @@
 #define MEM_SIZE	(16*1024*1024)
 #endif
 
-#if defined(CONFIG_FPE_NWFPE) || defined(CONFIG_FPE_FASTFPE)
+#if defined(CONFIG_FPE_FASTFPE)
 char fpe_type[8];
 
 static int __init fpe_setup(char *line)
