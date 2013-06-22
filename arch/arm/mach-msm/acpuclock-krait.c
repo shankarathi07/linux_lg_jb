@@ -22,6 +22,7 @@
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
 #include <linux/regulator/consumer.h>
+#include <linux/module.h> 
 
 #include <asm/mach-types.h>
 #include <asm/cpu.h>
@@ -48,6 +49,9 @@
 
 static DEFINE_MUTEX(driver_lock);
 static DEFINE_SPINLOCK(l2_lock);
+
+char *cpu_type = "UNKNOWN";
+module_param(cpu_type, charp, 0755);
 
 static struct drv_data {
 	struct acpu_level *acpu_freq_tbl;
@@ -1113,7 +1117,8 @@ static int __init get_pvs_bin(u32 pte_efuse)
 		pvs_bin = 0;
 		dev_warn(drv.dev, "ACPU PVS: Defaulting to %d\n", pvs_bin);
 	} else {
-		dev_info(drv.dev, "ACPU PVS: %d\n", pvs_bin);
+		cpu_type = pvs_names[tbl_idx];
+		dev_info(drv.dev, "ACPU PVS: %s\n", pvs_names[tbl_idx]);
 	}
 
 	return pvs_bin;
