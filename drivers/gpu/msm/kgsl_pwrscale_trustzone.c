@@ -193,8 +193,7 @@ static int simple_governor(struct kgsl_device *device, int idle_stat)
 }
 #endif
 
-static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale,
-						unsigned int ignore_idle)
+static void tz_idle(struct kgsl_device *device, struct kgsl_pwrscale *pwrscale)
 {
 	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 	struct tz_priv *priv = pwrscale->priv;
